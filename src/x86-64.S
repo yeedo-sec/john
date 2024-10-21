@@ -26,9 +26,6 @@
  * Addition of single DES encryption with no salt by Deepika Dutta Mishra
  * <dipikadutta at gmail.com> in 2013, no rights reserved.
  *
- * ...with changes in the jumbo patch, by Alain Espinosa (starting with a
- * comment further down this file).
- *
  * Various tweaks & fixes and support for Win64 and Linux-X32 ABIs as well
  * as CPU detection additions by magnum 2010-2015.
  */
