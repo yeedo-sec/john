@@ -32,7 +32,7 @@ inline void
 s1(vtype a1, vtype a2, vtype a3, vtype a4, vtype a5, vtype a6,
    vtype *out, vtype c1, vtype c2, vtype c3, vtype c4)
 {
-#if 1 /* 23 gates by Sovyn Y. */
+#ifndef JOHN_DES_OPT_REG /* 23 gates by Sovyn Y. */
 	vtype t0  = lut3( a3,  a2,  a1, 0x29);
 	vtype t1  = lut3( a6,  a5,  t0, 0x96);
 	vtype t2  = lut3( a6,  a5,  a1, 0x35);
@@ -151,7 +151,7 @@ inline void
 s3(vtype a1, vtype a2, vtype a3, vtype a4, vtype a5, vtype a6,
    vtype *out, vtype c1, vtype c2, vtype c3, vtype c4)
 {
-#if 1 /* 24 gates by Sovyn Y. */
+#ifndef JOHN_DES_OPT_REG /* 24 gates by Sovyn Y. */
 	vtype t0  = lut3( a5,  a3,  a1, 0x37);
 	vtype t1  = lut3( a6,  a2,  t0, 0x96);
 	vtype t2  = lut3( a6,  a5,  a4, 0x63);

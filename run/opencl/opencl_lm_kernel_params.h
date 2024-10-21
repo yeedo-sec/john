@@ -40,6 +40,7 @@ typedef unsigned WORD vtype;
 #endif
 
 #if defined(_NV) || __CPU__
+#define JOHN_DES_OPT_REG /* Optimize register pressure more than gate count */
 #include "opencl_sboxes.h"
 #else
 #include "opencl_sboxes-s.h"
