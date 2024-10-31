@@ -107,9 +107,9 @@ void filter()
 		i++;
 
 	while (m = mod[save[j++]]) {
-		word[k++] = m & 0xff;
+		word[k++] = m;
 		while (m >>= 8)
-			word[k++] = m & 0xff;
+			word[k++] = m;
 	}
 	word[k] = 0;
 }
