@@ -80,6 +80,12 @@ int mod[0x100];
 
 void init()
 {
+	int i;
+
+	i = -1;
+	while (++i < 0x100)
+		mod[i] = i;
+
 `;
 
 for (my $i = 0; $i <= $#tokens; $i++) {
@@ -90,13 +96,7 @@ for (my $i = 0; $i <= $#tokens; $i++) {
 	printf("\tmod[%d] = 0x%x; // \"%s\" %d\n", $c, $v, $sub, $subcnt{$sub});
 }
 
-print q`
-	int i;
-	i = 0;
-	while (++i < 0x100)
-		if (!mod[i])
-			mod[i] = i;
-}
+print q`}
 
 void filter()
 {
