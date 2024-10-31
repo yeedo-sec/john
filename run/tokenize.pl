@@ -39,7 +39,7 @@ while (<>) {
 		for (my $pos = 0; $pos <= $maxpos; $pos++) {
 			my $sub = substr($_, $pos, $len);
 			# Disallow chars we currently can't encode for sed
-			next if ($sub =~ '[/.\\\]');
+			next if ($sub =~ '[\'/.*\\\]');
 			$subcnt{$sub} += $len;
 		}
 	}
@@ -49,8 +49,6 @@ my @subtop = sort {$subcnt{$b} <=> $subcnt{$a}} keys %subcnt;
 
 my @tokens;
 foreach my $sub (@subtop) {
-#	print "$sub", "\t", $subcnt{$sub}, "\n";
-	next if $subcnt{$sub} < 2;
 	$tokens[$#tokens + 1] = $sub;
 	last if $#tokens >= $maxtok - 1;
 }
