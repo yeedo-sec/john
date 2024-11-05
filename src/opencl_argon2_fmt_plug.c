@@ -741,12 +741,11 @@ static void ctx_init(argon2_context *ctx)
 	static uint8_t out[BINARY_SIZE];
 	static uint8_t salt[SALT_SIZE];
 
-	ctx->adlen = 0;
-	ctx->saltlen = SALT_SIZE;
-	ctx->outlen = BINARY_SIZE;
-
+	memset(ctx, 0, sizeof(*ctx));
 	ctx->out = out;
+	ctx->outlen = sizeof(out);
 	ctx->salt = salt;
+	ctx->saltlen = sizeof(salt);
 }
 
 static int valid(char *ciphertext, struct fmt_main *self)
