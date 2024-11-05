@@ -19,7 +19,7 @@
  * SIMD builds have these functions optimised in argon2_opt_plug.c
  */
 #include "arch.h"
-#if !defined(__SSE2__) || !defined(JOHN_NO_SIMD)
+#if !defined(__SSE2__) || defined(JOHN_NO_SIMD)
 
 #include <stdint.h>
 #include <string.h>
