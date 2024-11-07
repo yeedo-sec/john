@@ -155,10 +155,8 @@ void reset(struct db_main *db)
 		return;
 
 	int i;
-	for (i = 0; i < max_threads; i++) {
+	for (i = 0; i < max_threads; i++)
 		free_region_t(&memory[i]);
-		init_region_t(&memory[i]);
-	}
 }
 
 static void *get_salt(char *ciphertext)
@@ -257,8 +255,8 @@ static int derive_keys(region_t *memory, int index, derived_key *dk)
 	lut_item *lut = memory->aligned;
 	size_t bytes_reqd = (size_t)n * sizeof(*lut);
 	if (!lut || memory->aligned_size < bytes_reqd) {
-		free_region_t(memory);
-		if (!(lut = alloc_region_t(memory, bytes_reqd)))
+		if (free_region_t(memory) ||
+		    !(lut = alloc_region_t(memory, bytes_reqd)))
 			return -1;
 	}
 
