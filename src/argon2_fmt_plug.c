@@ -29,7 +29,7 @@ john_register_one(&fmt_argon2);
 #include "argon2.h"
 #include "argon2_encoding.h"
 
-#define FORMAT_LABEL            "argon2"
+#define FORMAT_LABEL            "Argon2"
 #define FORMAT_NAME             ""
 #define FORMAT_TAG_d            "$argon2d$"
 #define FORMAT_TAG_i            "$argon2i$"
@@ -38,19 +38,19 @@ john_register_one(&fmt_argon2);
 #define FORMAT_TAG_LEN_ID       (sizeof(FORMAT_TAG_id)-1)
 
 #if !defined (JOHN_NO_SIMD) && defined(__AVX512F__)
-#define ALGORITHM_NAME          "Blake2 512/512 AVX512F"
+#define ALGORITHM_NAME          "BlaMka 512/512 AVX512F"
 #elif !defined (JOHN_NO_SIMD) && defined(__AVX2__)
-#define ALGORITHM_NAME          "Blake2 256/256 AVX2"
+#define ALGORITHM_NAME          "BlaMka 256/256 AVX2"
 #elif !defined (JOHN_NO_SIMD) && defined(__XOP__)
-#define ALGORITHM_NAME          "Blake2 128/128 XOP"
+#define ALGORITHM_NAME          "BlaMka 128/128 XOP"
 #elif !defined (JOHN_NO_SIMD) && defined(__AVX__)
-#define ALGORITHM_NAME          "Blake2 128/128 AVX"
+#define ALGORITHM_NAME          "BlaMka 128/128 AVX"
 #elif !defined (JOHN_NO_SIMD) && defined(__SSSE3__)
-#define ALGORITHM_NAME          "Blake2 128/128 SSSE3"
+#define ALGORITHM_NAME          "BlaMka 128/128 SSSE3"
 #elif !defined (JOHN_NO_SIMD) && defined(__SSE2__)
-#define ALGORITHM_NAME          "Blake2 128/128 SSE2"
+#define ALGORITHM_NAME          "BlaMka 128/128 SSE2"
 #else
-#define ALGORITHM_NAME          "Blake2 32/" ARCH_BITS_STR
+#define ALGORITHM_NAME          "BlaMka " ARCH_BITS_STR "/" ARCH_BITS_STR
 #endif
 
 #define BENCHMARK_COMMENT       ""

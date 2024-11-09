@@ -36,8 +36,8 @@ john_register_one(&fmt_opencl_argon2);
 #include "opencl_common.h"
 
 #define FORMAT_LABEL            "argon2-opencl"
-#define FORMAT_NAME             ""
-#define ALGORITHM_NAME          "Blake2 OpenCL"
+#define FORMAT_NAME             "Argon2"
+#define ALGORITHM_NAME          "BlaMka OpenCL"
 #define FORMAT_TAG_d            "$argon2d$"
 #define FORMAT_TAG_i            "$argon2i$"
 #define FORMAT_TAG_id           "$argon2id$"
