@@ -46,7 +46,7 @@ john_register_one(&fmt_opencl_argon2);
 #define BENCHMARK_LENGTH        0x107
 #define PLAINTEXT_LENGTH        125
 #define BINARY_SIZE             256
-#define BINARY_ALIGN            sizeof(uint32_t)
+#define BINARY_ALIGN            1
 #define SALT_SIZE               64
 #define SALT_ALIGN              sizeof(uint32_t)
 
@@ -865,7 +865,7 @@ static int cmp_all(void *binary, int count)
 static int cmp_one(void *binary, int index)
 {
 	assert(binary && index >=0 && index < MAX_KEYS_PER_CRYPT);
-	return !memcmp(binary, crypted[index],  saved_salt.hash_size);
+	return !memcmp(binary, crypted[index], saved_salt.hash_size);
 }
 
 static int cmp_exact(char *source, int index)
