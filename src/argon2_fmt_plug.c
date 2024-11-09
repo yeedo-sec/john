@@ -128,6 +128,7 @@ struct argon2_salt {
 struct argon2_memory {
 	int used;
 	region_t region;
+	char padding[MEM_ALIGN_CACHE - sizeof(int) - sizeof(region_t)];
 };
 
 static struct argon2_salt saved_salt;
