@@ -201,10 +201,7 @@ static int valid(char *ciphertext, struct fmt_main *self)
 	else
 		return 0;
 
-	if (res != ARGON2_OK)
-	  return 0;
-
-	return 1;
+	return res == ARGON2_OK;
 }
 
 static void set_key(char *key, int index)
