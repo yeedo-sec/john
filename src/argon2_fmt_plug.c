@@ -273,43 +273,59 @@ static void set_salt(void *salt)
 
 static int allocate(uint8_t **memory, size_t size)
 {
-	if (thread_mem[THREAD_NUMBER].used)
-		error_msg("%s() thread %u: Memory allocated twice\n", __FUNCTION__, THREAD_NUMBER);
+	if (THREAD_NUMBER < 0 || THREAD_NUMBER > NUM_THREADS) {
+		fprintf(stderr, "Error: Argon2: Thread number %d out of range\n", THREAD_NUMBER);
+		goto fail;
+	}
+	if (thread_mem[THREAD_NUMBER].used) {
+		fprintf(stderr, "Error: Argon2: Thread %d: Memory allocated twice\n", THREAD_NUMBER);
+		goto fail;
+	}
 
-	if (thread_mem[THREAD_NUMBER].region.aligned_size == 0) {
-		alloc_region_t(&thread_mem[THREAD_NUMBER].region, size);
-		thread_mem[THREAD_NUMBER].region.aligned_size = size;
-	} else if (thread_mem[THREAD_NUMBER].region.aligned_size < size) {
-		free_region_t(&thread_mem[THREAD_NUMBER].region);
-		alloc_region_t(&thread_mem[THREAD_NUMBER].region, size);
-		thread_mem[THREAD_NUMBER].region.aligned_size = size;
+	if (thread_mem[THREAD_NUMBER].region.aligned_size < size) {
+		if (free_region_t(&thread_mem[THREAD_NUMBER].region) ||
+		    !alloc_region_t(&thread_mem[THREAD_NUMBER].region, size))
+			goto fail;
 	}
 
 	thread_mem[THREAD_NUMBER].used = 1;
 	*memory = thread_mem[THREAD_NUMBER].region.aligned;
 
-	return 1;
+	return 0;
+
+fail:
+	*memory = NULL;
+	return -1;
 }
 
 static void deallocate(uint8_t *memory, size_t size)
 {
+	if (THREAD_NUMBER < 0 || THREAD_NUMBER > NUM_THREADS) {
+		fprintf(stderr, "Error: Argon2: Thread number %d out of range\n", THREAD_NUMBER);
+		return;
+	}
+
 	if (!thread_mem[THREAD_NUMBER].used)
-		error_msg("%s(): thread %u: Freed memory not in use\n", __FUNCTION__, THREAD_NUMBER);
+		fprintf(stderr, "Error: Argon2: Thread %d: Freed memory not in use\n", THREAD_NUMBER);
+
 	if (thread_mem[THREAD_NUMBER].region.aligned_size < size)
-		error_msg("%s(): thread %u: incorrect size %zu, was %zu\n", __FUNCTION__, THREAD_NUMBER, size, thread_mem[THREAD_NUMBER].region.aligned_size);
+		fprintf(stderr, "Error: Argon2: Thread %d: Freeing incorrect size %zu, was %zu\n",
+		    THREAD_NUMBER, size, thread_mem[THREAD_NUMBER].region.aligned_size);
 
 	thread_mem[THREAD_NUMBER].used = 0;
 }
 
 static int crypt_all(int *pcount, struct db_salt *salt)
 {
-	int i;
 	const int count = *pcount;
+	int failed = 0;
+	int i;
 
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
 	for (i = 0; i < count; i++) {
+		argon2_error_codes error_code;
 		argon2_context context = {
 			.out = (uint8_t*)crypted[i],
 			.outlen = saved_salt.hash_size,
@@ -326,8 +342,23 @@ static int crypt_all(int *pcount, struct db_salt *salt)
 			.flags = ARGON2_DEFAULT_FLAGS,
 			.version = ARGON2_VERSION_NUMBER
 		};
-		argon2_ctx(&context, saved_salt.type);
+		error_code = argon2_ctx(&context, saved_salt.type);
+		if (error_code != ARGON2_OK) {
+			failed = -1;
+			fprintf(stderr, "Error: Argon2 failed: %s\n", argon2_error_message(error_code));
+#ifndef _OPENMP
+			break;
+#endif
+		}
 	}
+
+	if (failed) {
+#ifdef _OPENMP
+		fprintf(stderr, "Error: Argon2 failed in some threads\n");
+#endif
+		error();
+	}
+
 	return count;
 }
 
