@@ -76,7 +76,8 @@ $ sudo dd if=/dev/disk2 of=disk_image conv=noerror,sync
 +2063597568 bytes transferred in 292.749849 secs (7049013 bytes/sec)
 
 For further details about User Password and Recovery Password attacks, please
-refer to the Wiki page: http://openwall.info/wiki/john/OpenCL-BitLocker.
+refer to the Wiki page: https://openwall.info/wiki/john/OpenCL-BitLocker
+
 
 Step 2: Attack!
 ---------------
@@ -88,9 +89,30 @@ $ ./john --format=bitlocker-opencl --wordlist=wordlist target_hash
 Currently, this format is able to evaluate passwords having length between 8
 (minimum password length) and 55 characters.
 
+To avoid wasting compute resources, choose just one hash for this attack -
+either $bitlocker$0$... or $bitlocker$1$...
+
+
+Recovery Passwords (but you're out of luck cracking these, so just don't)
+-------------------------------------------------------------------------
+
 The mask you can use to generate Recovery Passwords is:
 
--mask=?d?d?d?d?d?d[-]?d?d?d?d?d?d[-]?d?d?d?d?d?d[-]?d?d?d?d?d?d[-]?d?d?d?d?d?d[-]?d?d?d?d?d?d[-]?d?d?d?d?d?d[-]?d?d?d?d?d?d
+--mask=?d?d?d?d?d?d-?d?d?d?d?d?d-?d?d?d?d?d?d-?d?d?d?d?d?d-?d?d?d?d?d?d-?d?d?d?d?d?d-?d?d?d?d?d?d-?d?d?d?d?d?d
+
+Please note that the number of possible Recovery Passwords is WAY too large, so
+there's effectively NO CHANCE that this will find yours unless you recall
+almost all of it (except for just a handful of digits) and replace most of the
+"?d" above with the known digits.
+
+Recovery Passwords are currently only supported by the BitLocker-OpenCL format
+(for use on GPUs), not by the corresponding BitLocker CPU format, but like the
+above paragraph says it's a controversial feature anyhow, which is unlikely to
+ever help.
+
+To avoid wasting compute resources, choose just one hash for this attack -
+either $bitlocker$2$... or $bitlocker$3$...
+
 
 Links
 -----
@@ -105,5 +127,5 @@ https://github.com/e-ago/bitcracker/tree/master/Dictionary
 
 More information on BitLocker cracking can be found at,
 
-* http://openwall.info/wiki/john/OpenCL-BitLocker
+* https://openwall.info/wiki/john/OpenCL-BitLocker
 * https://github.com/e-ago/bitcracker
