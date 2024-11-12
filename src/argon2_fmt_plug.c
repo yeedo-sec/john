@@ -57,7 +57,7 @@ john_register_one(&fmt_argon2);
 #define BENCHMARK_LENGTH        0x107
 #define PLAINTEXT_LENGTH        125 //only in john
 #define BINARY_SIZE             256 //only in john
-#define BINARY_ALIGN            1
+#define BINARY_ALIGN            sizeof(uint32_t)
 #define SALT_SIZE               64  //only in john
 #define SALT_ALIGN              sizeof(uint32_t)
 
@@ -217,7 +217,7 @@ static char *get_key(int index)
 
 static void *get_binary(char *ciphertext)
 {
-	static char out[BINARY_SIZE];
+	static uint32_t out[(BINARY_SIZE + 3) / 4];
 	argon2_context ctx;
 
 	ctx_init(&ctx);
