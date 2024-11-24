@@ -82,7 +82,7 @@
  * link-time optimizations.  For the time being, keeping these MD5 routines in
  * their own translation unit avoids the problem.
  */
-#if ARCH_ALLOWS_UNALIGNED==1
+#if ARCH_LITTLE_ENDIAN && ARCH_ALLOWS_UNALIGNED
 #define SET(n) \
 	(*(MD5_u32plus *)&ptr[(n) * 4])
 #define GET(n) \

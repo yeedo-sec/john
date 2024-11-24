@@ -52,7 +52,7 @@ typedef struct {
 	MD4_u32plus A, B, C, D;
 	MD4_u32plus lo, hi;
 	unsigned char buffer[64];
-#if !ARCH_ALLOWS_UNALIGNED
+#if !(ARCH_LITTLE_ENDIAN && ARCH_ALLOWS_UNALIGNED)
 	MD4_u32plus block[16];
 #endif
 } MD4_CTX;
