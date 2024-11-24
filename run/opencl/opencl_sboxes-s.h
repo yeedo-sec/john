@@ -10,7 +10,7 @@
  *
  * These Boolean expressions corresponding to DES S-boxes have been generated
  * by Roman Rusakov <roman_rus at openwall.com> for use in Openwall's
- * John the Ripper password cracker: http://www.openwall.com/john/
+ * John the Ripper password cracker: https://www.openwall.com/john/
  * Being mathematical formulas, they are not copyrighted and are free for reuse
  * by anyone.
  *
