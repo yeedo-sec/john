@@ -10,7 +10,7 @@
  * implied. See the following for more information on the GPLv2 license:
  * http://www.gnu.org/licenses/gpl-2.0.html
  *
- * More info here: http://openwall.info/wiki/john/OpenCL-BitLocker
+ * More info here: https://openwall.info/wiki/john/OpenCL-BitLocker
  *
  * A standalone CUDA implementation is available here: https://github.com/e-ago/bitcracker.
  */

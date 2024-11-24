@@ -14,7 +14,7 @@
  * is needed is to put the output of that script into this file, and
  * then hook that code into rules.c and unicode.c (and options.c/.h to
  * add the new code page to command line).  See the wiki tutorial page
- * at http://openwall.info/wiki/john/tutorials/add-codepage for help.
+ * at https://openwall.info/wiki/john/tutorials/add-codepage for help.
  */
 
 #ifndef __ENCODING_DATA_H__

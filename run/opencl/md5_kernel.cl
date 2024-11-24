@@ -1,6 +1,6 @@
 /*
  * MD5 OpenCL kernel based on Solar Designer's MD5 algorithm implementation at:
- * http://openwall.info/wiki/people/solar/software/public-domain-source-code/md5
+ * https://openwall.info/wiki/people/solar/software/public-domain-source-code/md5
  *
  * This software is Copyright (c) 2010, Dhiru Kholia <dhiru.kholia at gmail.com>
  * and Copyright (c) 2012-2023, magnum

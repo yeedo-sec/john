@@ -1,6 +1,6 @@
 /*
  * MD4 OpenCL kernel based on Solar Designer's MD4 algorithm implementation at:
- * http://openwall.info/wiki/people/solar/software/public-domain-source-code/md4
+ * https://openwall.info/wiki/people/solar/software/public-domain-source-code/md4
  * This code is in public domain.
  *
  * This software is Copyright (c) 2010, Dhiru Kholia <dhiru.kholia at gmail.com>

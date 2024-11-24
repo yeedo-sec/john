@@ -13119,7 +13119,7 @@ Claudio André (192):
 	Clean-up.
 	Hopefully the bug is gone.
 	Tested with TS and 'real' cases from
-	  http://openwall.info/wiki/john/development/GPU#Acceptance-Tests.
+	  https://openwall.info/wiki/john/development/GPU#Acceptance-Tests.
 	  Everything seems to be Ok and on VLIW5 (at least mine) it runs at 2x
 	  faster.
 	Better bounds detection Or I fixed a bug (i haven't found) or I

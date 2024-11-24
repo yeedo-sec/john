@@ -2,7 +2,7 @@
 * This software is Copyright (c) 2012 Sayantan Datta <std2048 at gmail dot com>
 * and it is hereby released to the general public under the following terms:
 * Redistribution and use in source and binary forms, with or without modification, are permitted.
-* Based on S3nf implementation http://openwall.info/wiki/john/MSCash2
+* Based on S3nf implementation https://openwall.info/wiki/john/MSCash2
 * Modified to support salts upto 19 characters. Bug in orginal code allowed only upto 8 characters.
 */
 #include "opencl_device_info.h"
