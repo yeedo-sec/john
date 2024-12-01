@@ -456,12 +456,13 @@ int mbedtls_aesni_crypt_ecb(mbedtls_aes_context *ctx,
                             const unsigned char input[16],
                             unsigned char output[16])
 {
-    asm ("movdqu    (%3), %%xmm0    \n\t" // load input
+    uint32_t n = ctx->nr, *p = ctx->buf + ctx->rk_offset;
+    asm ("movdqu    (%4), %%xmm0    \n\t" // load input
          "movdqu    (%1), %%xmm1    \n\t" // load round key 0
          "pxor      %%xmm1, %%xmm0  \n\t" // round 0
          "add       $16, %1         \n\t" // point to next round key
          "subl      $1, %0          \n\t" // normal rounds = nr - 1
-         "test      %2, %2          \n\t" // mode?
+         "test      %3, %3          \n\t" // mode?
          "jz        2f              \n\t" // 0 = decrypt
 
          "1:                        \n\t" // encryption loop
@@ -486,10 +487,10 @@ int mbedtls_aesni_crypt_ecb(mbedtls_aes_context *ctx,
 #endif
 
          "3:                        \n\t"
-         "movdqu    %%xmm0, (%4)    \n\t" // export output
-         :
-         : "r" (ctx->nr), "r" (ctx->buf + ctx->rk_offset), "r" (mode), "r" (input), "r" (output)
-         : "memory", "cc", "xmm0", "xmm1");
+         "movdqu    %%xmm0, %2      \n\t" // export output
+         : "+r" (n), "+r" (p), "=m" (*(uint8_t(*)[16]) output)
+         : "r" (mode), "r" (input)
+         : "cc", "xmm0", "xmm1");
 
 
     return 0;
