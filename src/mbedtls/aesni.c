@@ -461,7 +461,7 @@ int mbedtls_aesni_crypt_ecb(mbedtls_aes_context *ctx,
          "movdqu    (%1), %%xmm1    \n\t" // load round key 0
          "pxor      %%xmm1, %%xmm0  \n\t" // round 0
          "add       $16, %1         \n\t" // point to next round key
-         "subl      $1, %0          \n\t" // normal rounds = nr - 1
+         "decl      %0              \n\t" // normal rounds = nr - 1
          "test      %3, %3          \n\t" // mode?
          "jz        2f              \n\t" // 0 = decrypt
 
@@ -469,7 +469,7 @@ int mbedtls_aesni_crypt_ecb(mbedtls_aes_context *ctx,
          "movdqu    (%1), %%xmm1    \n\t" // load round key
          AESENC(xmm1_xmm0)                // do round
          "add       $16, %1         \n\t" // point to next round key
-         "subl      $1, %0          \n\t" // loop
+         "decl      %0              \n\t" // loop
          "jnz       1b              \n\t"
          "movdqu    (%1), %%xmm1    \n\t" // load round key
          AESENCLAST(xmm1_xmm0)            // last round
@@ -480,7 +480,7 @@ int mbedtls_aesni_crypt_ecb(mbedtls_aes_context *ctx,
          "movdqu    (%1), %%xmm1    \n\t"
          AESDEC(xmm1_xmm0)                // do round
          "add       $16, %1         \n\t"
-         "subl      $1, %0          \n\t"
+         "decl      %0              \n\t"
          "jnz       2b              \n\t"
          "movdqu    (%1), %%xmm1    \n\t" // load round key
          AESDECLAST(xmm1_xmm0)            // last round
