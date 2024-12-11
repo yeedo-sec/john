@@ -532,10 +532,15 @@ void mbedtls_aes_xts_free(mbedtls_aes_xts_context *ctx)
 #define MAY_NEED_TO_ALIGN
 #endif
 
-MBEDTLS_MAYBE_UNUSED static unsigned mbedtls_aes_rk_offset(uint32_t *buf)
+MBEDTLS_MAYBE_UNUSED static inline unsigned mbedtls_aes_rk_offset(uint32_t *buf)
 {
 #if defined(MAY_NEED_TO_ALIGN)
-    int align_16_bytes = 0;
+    static int align_16_bytes = 0;
+
+    if (align_16_bytes > 0)
+        goto align_16_bytes;
+    if (align_16_bytes < 0)
+        return 0;
 
 #if defined(MBEDTLS_VIA_PADLOCK_HAVE_CODE)
     if (aes_padlock_ace == -1) {
@@ -553,6 +558,7 @@ MBEDTLS_MAYBE_UNUSED static unsigned mbedtls_aes_rk_offset(uint32_t *buf)
 #endif
 
     if (align_16_bytes) {
+align_16_bytes: ;
         /* These implementations needs 16-byte alignment
          * for the round key array. */
         unsigned delta = ((uintptr_t) buf & 0x0000000fU) / 4;
@@ -561,6 +567,8 @@ MBEDTLS_MAYBE_UNUSED static unsigned mbedtls_aes_rk_offset(uint32_t *buf)
         } else {
             return 4 - delta; // 16 bytes = 4 uint32_t
         }
+    } else {
+        align_16_bytes = -1;
     }
 #else /* MAY_NEED_TO_ALIGN */
     (void) buf;
