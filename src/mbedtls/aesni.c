@@ -67,9 +67,11 @@ int mbedtls_aesni_has_support(unsigned int what)
              :
              : "eax", "ebx", "edx");
 #endif /* MBEDTLS_AESNI_HAVE_CODE */
+        asm ("" ::: "memory");
         done = 1;
     }
 
+    asm ("" ::: "memory");
     return (c & what) != 0;
 }
 #endif /* !MBEDTLS_AES_USE_HARDWARE_ONLY */
