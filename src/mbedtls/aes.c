@@ -1000,6 +1000,8 @@ int mbedtls_internal_aes_decrypt(mbedtls_aes_context *ctx,
 }
 #endif /* !MBEDTLS_AES_DECRYPT_ALT && !MBEDTLS_BLOCK_CIPHER_NO_DECRYPT */
 
+/* Should be unneeded in JtR */
+#if 0
 /* VIA Padlock and our intrinsics-based implementation of AESNI require
  * the round keys to be aligned on a 16-byte boundary. We take care of this
  * before creating them, but the AES context may have moved (this can happen
@@ -1017,6 +1019,9 @@ MBEDTLS_MAYBE_UNUSED static void aes_maybe_realign(mbedtls_aes_context *ctx)
         ctx->rk_offset = new_offset;
     }
 }
+#else
+#undef MAY_NEED_TO_ALIGN
+#endif
 
 /*
  * AES-ECB block encryption/decryption
