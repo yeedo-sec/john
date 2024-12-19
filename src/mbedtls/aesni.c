@@ -264,7 +264,7 @@ void mbedtls_aesni_inverse_key(unsigned char *invkey,
 /*
  * Key expansion, 128-bit case
  */
-static __m128i aesni_set_rk_128(__m128i state, __m128i xword)
+static inline __m128i aesni_set_rk_128(__m128i state, __m128i xword)
 {
     /*
      * Finish generating the next round key.
@@ -287,8 +287,8 @@ static __m128i aesni_set_rk_128(__m128i state, __m128i xword)
     return state;
 }
 
-static void aesni_setkey_enc_128(unsigned char *rk_bytes,
-                                 const unsigned char *key)
+static inline void aesni_setkey_enc_128(unsigned char *rk_bytes,
+                                        const unsigned char *key)
 {
     __m128i *rk = (__m128i *) rk_bytes;
 
@@ -309,8 +309,8 @@ static void aesni_setkey_enc_128(unsigned char *rk_bytes,
  * Key expansion, 192-bit case
  */
 #if !defined(MBEDTLS_AES_ONLY_128_BIT_KEY_LENGTH)
-static void aesni_set_rk_192(__m128i *state0, __m128i *state1, __m128i xword,
-                             unsigned char *rk)
+static inline void aesni_set_rk_192(__m128i *state0, __m128i *state1, __m128i xword,
+                                    unsigned char *rk)
 {
     /*
      * Finish generating the next 6 quarter-keys.
@@ -345,8 +345,8 @@ static void aesni_set_rk_192(__m128i *state0, __m128i *state1, __m128i xword,
     _mm_storel_epi64((__m128i *) (rk + 16), *state1); /* _mm_storeu_si64() is same, but needs gcc 9+ */
 }
 
-static void aesni_setkey_enc_192(unsigned char *rk,
-                                 const unsigned char *key)
+static inline void aesni_setkey_enc_192(unsigned char *rk,
+                                        const unsigned char *key)
 {
     /* First round: use original key */
     __m128i state0 = _mm_loadu_si128((const __m128i *) key);
@@ -371,8 +371,8 @@ static void aesni_setkey_enc_192(unsigned char *rk,
  * Key expansion, 256-bit case
  */
 #if !defined(MBEDTLS_AES_ONLY_128_BIT_KEY_LENGTH)
-static void aesni_set_rk_256(__m128i state0, __m128i state1, __m128i xword,
-                             __m128i *rk0, __m128i *rk1)
+static inline void aesni_set_rk_256(__m128i state0, __m128i state1, __m128i xword,
+                                    __m128i *rk0, __m128i *rk1)
 {
     /*
      * Finish generating the next two round keys.
@@ -407,8 +407,8 @@ static void aesni_set_rk_256(__m128i state0, __m128i state1, __m128i xword,
     *rk1 = state1;
 }
 
-static void aesni_setkey_enc_256(unsigned char *rk_bytes,
-                                 const unsigned char *key)
+static inline void aesni_setkey_enc_256(unsigned char *rk_bytes,
+                                        const unsigned char *key)
 {
     __m128i *rk = (__m128i *) rk_bytes;
 
