@@ -342,12 +342,12 @@ void pdf_r34(__global const uchar *pwbuf,
 			rc4_40_set_key(&rc4_ctx, key);
 			rc4(&rc4_ctx, digest, output, 16);
 			for (uint x = 0x01010101; x <= 0x13131313; x += 0x01010101) {
-				uint xor[2];
+				uint key_xor_x[2];
 
-				xor[0] = key[0] ^ x;
-				xor[1] = key[1] ^ x;
+				key_xor_x[0] = key[0] ^ x;
+				key_xor_x[1] = key[1] ^ x;
 
-				rc4_40_set_key(&rc4_ctx, xor);
+				rc4_40_set_key(&rc4_ctx, key_xor_x);
 				rc4(&rc4_ctx, output, output, 16);
 			}
 		} else
@@ -358,14 +358,14 @@ void pdf_r34(__global const uchar *pwbuf,
 			rc4_128_set_key(&rc4_ctx, key);
 			rc4(&rc4_ctx, digest, output, 16);
 			for (uint x = 0x01010101; x <= 0x13131313; x += 0x01010101) {
-				uint xor[16 / 4];
+				uint key_xor_x[16 / 4];
 
-				xor[0] = key[0] ^ x;
-				xor[1] = key[1] ^ x;
-				xor[2] = key[2] ^ x;
-				xor[3] = key[3] ^ x;
+				key_xor_x[0] = key[0] ^ x;
+				key_xor_x[1] = key[1] ^ x;
+				key_xor_x[2] = key[2] ^ x;
+				key_xor_x[3] = key[3] ^ x;
 
-				rc4_128_set_key(&rc4_ctx, xor);
+				rc4_128_set_key(&rc4_ctx, key_xor_x);
 				rc4(&rc4_ctx, output, output, 16);
 			}
 #if RC4_ANY_KEY_LENGTH
@@ -373,14 +373,14 @@ void pdf_r34(__global const uchar *pwbuf,
 			rc4_set_key(&rc4_ctx, pdf_salt->key_length / 8, key);
 			rc4(&rc4_ctx, digest, output, 16);
 			for (uint x = 0x01010101; x <= 0x13131313; x += 0x01010101) {
-				uint xor[16 / 4];
+				uint key_xor_x[16 / 4];
 
-				xor[0] = key[0] ^ x;
-				xor[1] = key[1] ^ x;
-				xor[2] = key[2] ^ x;
-				xor[3] = key[3] ^ x;
+				key_xor_x[0] = key[0] ^ x;
+				key_xor_x[1] = key[1] ^ x;
+				key_xor_x[2] = key[2] ^ x;
+				key_xor_x[3] = key[3] ^ x;
 
-				rc4_set_key(&rc4_ctx, pdf_salt->key_length / 8, xor);
+				rc4_set_key(&rc4_ctx, pdf_salt->key_length / 8, key_xor_x);
 				rc4(&rc4_ctx, output, output, 16);
 			}
 #endif
