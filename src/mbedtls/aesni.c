@@ -96,16 +96,14 @@ int mbedtls_aesni_crypt_ecb(mbedtls_aes_context *ctx,
 
 #if !defined(MBEDTLS_BLOCK_CIPHER_NO_DECRYPT)
     if (mode == MBEDTLS_AES_DECRYPT) {
-        if (nr == 10)
-            goto rounds_10_dec;
-        if (nr == 12)
-            goto rounds_12_dec;
-        state = _mm_aesdec_si128(state, *++rk);
-        state = _mm_aesdec_si128(state, *++rk);
-rounds_12_dec:
-        state = _mm_aesdec_si128(state, *++rk);
-        state = _mm_aesdec_si128(state, *++rk);
-rounds_10_dec:
+        if (nr != 10) {
+            if (nr != 12) {
+                state = _mm_aesdec_si128(state, *++rk);
+                state = _mm_aesdec_si128(state, *++rk);
+            }
+            state = _mm_aesdec_si128(state, *++rk);
+            state = _mm_aesdec_si128(state, *++rk);
+        }
         state = _mm_aesdec_si128(state, *++rk);
         state = _mm_aesdec_si128(state, *++rk);
         state = _mm_aesdec_si128(state, *++rk);
@@ -121,16 +119,14 @@ rounds_10_dec:
     (void) mode;
 #endif
     {
-        if (nr == 10)
-            goto rounds_10_enc;
-        if (nr == 12)
-            goto rounds_12_enc;
-        state = _mm_aesenc_si128(state, *++rk);
-        state = _mm_aesenc_si128(state, *++rk);
-rounds_12_enc:
-        state = _mm_aesenc_si128(state, *++rk);
-        state = _mm_aesenc_si128(state, *++rk);
-rounds_10_enc:
+        if (nr != 10) {
+            if (nr != 12) {
+                state = _mm_aesenc_si128(state, *++rk);
+                state = _mm_aesenc_si128(state, *++rk);
+            }
+            state = _mm_aesenc_si128(state, *++rk);
+            state = _mm_aesenc_si128(state, *++rk);
+        }
         state = _mm_aesenc_si128(state, *++rk);
         state = _mm_aesenc_si128(state, *++rk);
         state = _mm_aesenc_si128(state, *++rk);
