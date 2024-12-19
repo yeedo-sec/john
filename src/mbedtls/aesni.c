@@ -90,8 +90,7 @@ int mbedtls_aesni_crypt_ecb(mbedtls_aes_context *ctx,
     unsigned nr = ctx->nr; // Number of rounds
 
     // Load round key 0
-    __m128i state;
-    memcpy(&state, input, 16);
+    __m128i state = _mm_loadu_si128((const __m128i *) input);
     state = _mm_xor_si128(state, rk[0]);  // state ^= *rk;
 
 #if !defined(MBEDTLS_BLOCK_CIPHER_NO_DECRYPT)
@@ -139,7 +138,7 @@ int mbedtls_aesni_crypt_ecb(mbedtls_aes_context *ctx,
         state = _mm_aesenclast_si128(state, *++rk);
     }
 
-    memcpy(output, &state, 16);
+    _mm_storeu_si128((__m128i *) output, state);
     return 0;
 }
 
