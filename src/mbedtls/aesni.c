@@ -292,7 +292,7 @@ static void aesni_setkey_enc_128(unsigned char *rk_bytes,
 {
     __m128i *rk = (__m128i *) rk_bytes;
 
-    memcpy(&rk[0], key, 16);
+    rk[0] = _mm_loadu_si128((const __m128i *) key);
     rk[1] = aesni_set_rk_128(rk[0], _mm_aeskeygenassist_si128(rk[0], 0x01));
     rk[2] = aesni_set_rk_128(rk[1], _mm_aeskeygenassist_si128(rk[1], 0x02));
     rk[3] = aesni_set_rk_128(rk[2], _mm_aeskeygenassist_si128(rk[2], 0x04));
@@ -341,18 +341,20 @@ static void aesni_set_rk_192(__m128i *state0, __m128i *state1, __m128i xword,
     /* Store state0 and the low half of state1 into rk, which is conceptually
      * an array of 24-byte elements. Since 24 is not a multiple of 16,
      * rk is not necessarily aligned so just `*rk = *state0` doesn't work. */
-    memcpy(rk, state0, 16);
-    memcpy(rk + 16, state1, 8);
+    _mm_storeu_si128((__m128i *) rk, *state0);
+    _mm_storel_epi64((__m128i *) (rk + 16), *state1); /* _mm_storeu_si64() is same, but needs gcc 9+ */
 }
 
 static void aesni_setkey_enc_192(unsigned char *rk,
                                  const unsigned char *key)
 {
     /* First round: use original key */
-    memcpy(rk, key, 24);
+    __m128i state0 = _mm_loadu_si128((const __m128i *) key);
+    __m128i state1 = _mm_loadl_epi64((const __m128i *) (key + 16)); /* _mm_loadu_si64() is same, but needs gcc 9+ */
     /* aes.c guarantees that rk is aligned on a 16-byte boundary. */
-    __m128i state0 = ((__m128i *) rk)[0];
-    __m128i state1 = _mm_loadl_epi64(((__m128i *) rk) + 1);
+    _mm_store_si128((__m128i *) rk, state0);
+    _mm_store_si128((__m128i *) (rk + 16), state1);
+    /* Or alternatively _mm_storel_epi64((__m128i *)(rk + 16), state1); */
 
     aesni_set_rk_192(&state0, &state1, _mm_aeskeygenassist_si128(state1, 0x01), rk + 24 * 1);
     aesni_set_rk_192(&state0, &state1, _mm_aeskeygenassist_si128(state1, 0x02), rk + 24 * 2);
@@ -410,8 +412,8 @@ static void aesni_setkey_enc_256(unsigned char *rk_bytes,
 {
     __m128i *rk = (__m128i *) rk_bytes;
 
-    memcpy(&rk[0], key, 16);
-    memcpy(&rk[1], key + 16, 16);
+    rk[0] = _mm_loadu_si128((const __m128i *) key);
+    rk[1] = _mm_loadu_si128((const __m128i *) (key + 16));
 
     /*
      * Main "loop" - Generating one more key than necessary,
