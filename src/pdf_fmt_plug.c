@@ -156,7 +156,7 @@ pdf_compute_encryption_key_r5(unsigned char *password, int pwlen, int ownerkey, 
 /* SumatraPDF: support crypt version 5 revision 6 */
 /*
  * Compute an encryption key (PDF 1.7 ExtensionLevel 8 algorithm 3.2b)
- * http://esec-lab.sogeti.com/post/The-undocumented-password-validation-algorithm-of-Adobe-Reader-X
+ * https://web.archive.org/web/20130211160511/http://esec-lab.sogeti.com/post/The-undocumented-password-validation-algorithm-of-Adobe-Reader-X
  */
 static void
 pdf_compute_hardened_hash_r6(unsigned char *password, int pwlen, unsigned char salt[8],
