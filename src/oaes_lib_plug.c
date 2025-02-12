@@ -64,10 +64,6 @@ typedef struct _oaes_key
 
 typedef struct _oaes_ctx
 {
-#ifdef OAES_HAVE_ISAAC
-  randctx * rctx;
-#endif // OAES_HAVE_ISAAC
-
 #ifdef OAES_DEBUG
 	oaes_step_cb step_cb;
 #endif // OAES_DEBUG
@@ -542,64 +538,6 @@ static OAES_RET oaes_key_expand( OAES_CTX * ctx )
 	return OAES_RET_SUCCESS;
 }
 
-static OAES_RET oaes_key_gen( OAES_CTX * ctx, size_t key_size )
-{
-	size_t _i;
-	oaes_key * _key = NULL;
-	oaes_ctx * _ctx = (oaes_ctx *) ctx;
-	OAES_RET _rc = OAES_RET_SUCCESS;
-
-	if( NULL == _ctx )
-		return OAES_RET_ARG1;
-
-	_key = (oaes_key *) calloc( sizeof( oaes_key ), 1 );
-
-	if( NULL == _key )
-		return OAES_RET_MEM;
-
-	if( _ctx->key )
-		oaes_key_destroy( &(_ctx->key) );
-
-	_key->data_len = key_size;
-	_key->data = (uint8_t *) calloc( key_size, sizeof( uint8_t ));
-
-	if( NULL == _key->data )
-		return OAES_RET_MEM;
-
-	for( _i = 0; _i < key_size; _i++ )
-#ifdef OAES_HAVE_ISAAC
-		_key->data[_i] = (uint8_t) rand( _ctx->rctx );
-#else
-		_key->data[_i] = (uint8_t) rand();
-#endif // OAES_HAVE_ISAAC
-
-	_ctx->key = _key;
-	_rc = _rc || oaes_key_expand( ctx );
-
-	if( _rc != OAES_RET_SUCCESS )
-	{
-		oaes_key_destroy( &(_ctx->key) );
-		return _rc;
-	}
-
-	return OAES_RET_SUCCESS;
-}
-
-OAES_RET oaes_key_gen_128( OAES_CTX * ctx )
-{
-	return oaes_key_gen( ctx, 16 );
-}
-
-OAES_RET oaes_key_gen_192( OAES_CTX * ctx )
-{
-	return oaes_key_gen( ctx, 24 );
-}
-
-OAES_RET oaes_key_gen_256( OAES_CTX * ctx )
-{
-	return oaes_key_gen( ctx, 32 );
-}
-
 OAES_RET oaes_key_export( OAES_CTX * ctx,
 		uint8_t * data, size_t * data_len )
 {
@@ -812,8 +750,6 @@ OAES_CTX * oaes_alloc(void)
 	if( NULL == _ctx )
 		return NULL;
 
-	srand(0); // XXX
-
 	_ctx->key = NULL;
 	oaes_set_option( _ctx, OAES_OPTION_CBC, NULL );
 
@@ -838,14 +774,6 @@ OAES_RET oaes_free( OAES_CTX ** ctx )
 	if( (*_ctx)->key )
 		oaes_key_destroy( &((*_ctx)->key) );
 
-#ifdef OAES_HAVE_ISAAC
-	if( (*_ctx)->rctx )
-	{
-		free( (*_ctx)->rctx );
-		(*_ctx)->rctx = NULL;
-	}
-#endif // OAES_HAVE_ISAAC
-
 	free( *_ctx );
 	*_ctx = NULL;
 
@@ -855,7 +783,6 @@ OAES_RET oaes_free( OAES_CTX ** ctx )
 OAES_RET oaes_set_option( OAES_CTX * ctx,
 		OAES_OPTION option, const void * value )
 {
-	size_t _i;
 	oaes_ctx * _ctx = (oaes_ctx *) ctx;
 
 	if( NULL == _ctx )
@@ -873,14 +800,7 @@ OAES_RET oaes_set_option( OAES_CTX * ctx,
 			if( value )
 				memcpy( _ctx->iv, value, OAES_BLOCK_SIZE );
 			else
-			{
-				for( _i = 0; _i < OAES_BLOCK_SIZE; _i++ )
-#ifdef OAES_HAVE_ISAAC
-					_ctx->iv[_i] = (uint8_t) rand( _ctx->rctx );
-#else
-					_ctx->iv[_i] = (uint8_t) rand();
-#endif // OAES_HAVE_ISAAC
-			}
+				memset( _ctx->iv, 0, OAES_BLOCK_SIZE );
 			break;
 
 #ifdef OAES_DEBUG
