@@ -26,6 +26,7 @@
 #include "jh.h"
 #include "keccak.h"
 #include "sph_skein.h"
+#include "slow_hash.h"
 
 union hash_state {
 	uint8_t b[200];
