@@ -50,7 +50,7 @@ static inline uint64_t lo_dword(uint64_t val) {
 
 static inline uint64_t mul128(uint64_t multiplier, uint64_t multiplicand, uint64_t* product_hi) {
 #if defined(__GNUC__) && defined(__x86_64__)
-  __asm__("mul %2" : "+a" (multiplier), "=d" (*product_hi) : "r" (multiplicand) : "cc");
+  __asm__("mulq %2" : "+a" (multiplier), "=d" (*product_hi) : "rm" (multiplicand) : "cc");
   return multiplier;
 #else
   // multiplier   = ab = a * 2^32 + b
