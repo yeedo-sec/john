@@ -33,9 +33,6 @@ union hash_state {
 	uint64_t w[25];
 };
 
-void hash_permutation(union hash_state *state);
-void hash_process(union hash_state *state, const uint8_t *buf, size_t count);
-
 enum {
 	HASH_SIZE = 32
 };
@@ -172,7 +169,6 @@ int cn_slow_hash(const void *data, size_t length, char *hash, void *memory)
 	const int have_aesni = mbedtls_aesni_has_support(MBEDTLS_AESNI_AES);
 #endif
 	block *long_state = memory; // This is 2 MiB, too large for stack
-	OAES_CTX *aes_ctx = oaes_alloc();
 	union cn_slow_hash_state state;
 	block text[INIT_SIZE_BLK];
 	block a, b, c, d;
@@ -181,6 +177,7 @@ int cn_slow_hash(const void *data, size_t length, char *hash, void *memory)
 	hash_process(&state.hs, data, length);
 	memcpy(text, state.init, INIT_SIZE_BYTE);
 
+	OAES_CTX *aes_ctx = oaes_alloc();
 	if (!aes_ctx || oaes_key_import_data(aes_ctx, state.hs.b, AES_KEY_SIZE))
 		goto fail;
 #if MBEDTLS_AESNI_HAVE_CODE == 2
