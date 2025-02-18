@@ -65,7 +65,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <openssl/crypto.h>
 #include <openssl/des.h>
 
 #include "mdc2-JtR.h"

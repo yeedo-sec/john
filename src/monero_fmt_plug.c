@@ -8,13 +8,6 @@
  * modification, are permitted.
  */
 
-#if !AC_BUILT
-#if __GNUC__ && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-#define ARCH_LITTLE_ENDIAN 1
-#endif
-#endif
-#include "arch.h"
-#if ARCH_LITTLE_ENDIAN
 #if FMT_EXTERNS_H
 extern struct fmt_main fmt_monero;
 #elif FMT_REGISTERS_H
@@ -37,13 +30,13 @@ john_register_one(&fmt_monero);
 #include "chacha.h"
 #include "slow_hash.h"
 
-#define FORMAT_LABEL            "monero"
-#define FORMAT_NAME             "monero Wallet"
+#define FORMAT_LABEL            "Monero"
+#define FORMAT_NAME             "Monero Wallet"
 #define FORMAT_TAG              "$monero$"
 #define TAG_LENGTH              (sizeof(FORMAT_TAG) - 1)
 #define ALGORITHM_NAME          "Pseudo-AES / ChaCha / Various 32/" ARCH_BITS_STR
 #define BENCHMARK_COMMENT       ""
-#define BENCHMARK_LENGTH        0x107
+#define BENCHMARK_LENGTH        7
 #define PLAINTEXT_LENGTH        125
 #define BINARY_SIZE             0
 #define BINARY_ALIGN            1
@@ -70,8 +63,12 @@ static struct fmt_tests tests[] = {
 
 static char (*saved_key)[PLAINTEXT_LENGTH + 1];
 static int *saved_len;
-static int any_cracked, *cracked;
+static char (*saved_slow_hash)[64];
+static int keys_changed, any_cracked, *cracked;
 static size_t cracked_size;
+
+static int max_threads;
+static region_t *memory;
 
 static struct custom_salt {
 	uint32_t ctlen;
@@ -82,17 +79,36 @@ static struct custom_salt {
 static void init(struct fmt_main *self)
 {
 	omp_autotune(self, OMP_SCALE);
+
+#ifdef _OPENMP
+	max_threads = omp_get_max_threads();
+#else
+	max_threads = 1;
+#endif
+
+	memory = mem_alloc(sizeof(*memory) * max_threads);
+	int i;
+	for (i = 0; i < max_threads; i++)
+		init_region(&memory[i]);
+
 	saved_key = mem_calloc(sizeof(*saved_key), self->params.max_keys_per_crypt);
 	saved_len = mem_calloc(self->params.max_keys_per_crypt, sizeof(*saved_len));
+	saved_slow_hash = mem_calloc(sizeof(*saved_slow_hash), self->params.max_keys_per_crypt);
+	keys_changed = any_cracked = 0;
 	cracked_size = sizeof(*cracked) * self->params.max_keys_per_crypt;
-	any_cracked = 0;
 	cracked = mem_calloc(cracked_size, 1);
 }
 
 static void done(void)
 {
+	int i;
+	for (i = 0; i < max_threads; i++)
+		free_region(&memory[i]);
+	MEM_FREE(memory);
+
 	MEM_FREE(saved_key);
 	MEM_FREE(saved_len);
+	MEM_FREE(saved_slow_hash);
 	MEM_FREE(cracked);
 }
 
@@ -160,6 +176,7 @@ static void set_salt(void *salt)
 static void set_key(char *key, int index)
 {
 	saved_len[index] = strnzcpyn(saved_key[index], key, PLAINTEXT_LENGTH + 1);
+	keys_changed = 1;
 }
 
 static char *get_key(int index)
@@ -170,26 +187,46 @@ static char *get_key(int index)
 // Based on https://github.com/monero-project/monero/blob/master/src/wallet/wallet2.cpp
 static int crypt_all(int *pcount, struct db_salt *salt)
 {
-	const int count = *pcount;
-	int index;
+	int failed = 0, count = *pcount, index;
 
 	if (any_cracked) {
 		memset(cracked, 0, cracked_size);
 		any_cracked = 0;
 	}
+
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
 	for (index = 0; index < count; index++) {
-		unsigned char km[64];
+		char *km = saved_slow_hash[index];
 		unsigned char out[32];
 		unsigned char iv[IVLEN];
 		struct chacha_ctx ckey;
 
+		if (keys_changed) {
+#ifdef _OPENMP
+			int t = omp_get_thread_num();
+			if (t >= max_threads) {
+				failed = -1;
+				continue;
+			}
+#else
+			const int t = 0;
+#endif
+			if ((!memory[t].aligned && !alloc_region(&memory[t], 1 << 21)) ||
+			    cn_slow_hash(saved_key[index], saved_len[index], km, memory[t].aligned)) {
+				failed = 1;
+#ifdef _OPENMP
+				continue;
+#else
+				break;
+#endif
+			}
+		}
+
 		// 1
 		memcpy(iv, cur_salt->ct, IVLEN);
-		cn_slow_hash(saved_key[index], saved_len[index], (char *)km);
-		chacha_keysetup(&ckey, km, 256);
+		chacha_keysetup(&ckey, (unsigned char *)km, 256);
 		chacha_ivsetup(&ckey, iv, NULL, IVLEN);
 		chacha_decrypt_bytes(&ckey, cur_salt->ct + IVLEN + 2, out, 32, 20);
 		if (memmem(out, 32, (void*)"key_data", 8) || memmem(out, 32, (void*)"m_creation_timestamp", 20)) {
@@ -203,7 +240,7 @@ static int crypt_all(int *pcount, struct db_salt *salt)
 
 		// 2
 		memcpy(iv, cur_salt->ct, IVLEN);
-		chacha_keysetup(&ckey, km, 256);
+		chacha_keysetup(&ckey, (unsigned char *)km, 256);
 		chacha_ivsetup(&ckey, iv, NULL, IVLEN);
 		chacha_decrypt_bytes(&ckey, cur_salt->ct + IVLEN + 2, out, 32, 8);
 		if (memmem(out, 32, (void*)"key_data", 8) || memmem(out, 32, (void*)"m_creation_timestamp", 20)) {
@@ -214,6 +251,19 @@ static int crypt_all(int *pcount, struct db_salt *salt)
 			any_cracked |= 1;
 		}
 	}
+
+	if (failed) {
+#ifdef _OPENMP
+		if (failed < 0) {
+			fprintf(stderr, "OpenMP thread number out of range\n");
+			error();
+		}
+#endif
+		fprintf(stderr, "Memory allocation failed\n");
+		error();
+	}
+
+	keys_changed = 0;
 
 	return count;
 }
@@ -283,14 +333,3 @@ struct fmt_main fmt_monero = {
 };
 
 #endif /* plugin stanza */
-
-#else
-#if !defined(FMT_EXTERNS_H) && !defined(FMT_REGISTERS_H)
-#ifdef __GNUC__
-#warning ": monero format requires little-endian, format disabled."
-#elif _MSC_VER
-#pragma message(": monero format requires little-endian, format disabled.")
-#endif
-#endif
-
-#endif	/* ARCH_LITTLE_ENDIAN */

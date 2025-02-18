@@ -1271,24 +1271,30 @@ void opencl_build(int sequential_id, const char *opts, int save, const char *fil
 
 	uint64_t end = john_get_nano();
 	log_event("- build time: %ss", ns2string(end - start));
-	if (options.verbosity >= VERB_MAX)
-		fprintf(stderr, "Build time: %ss\n", ns2string(end - start));
 
 	// Report build errors and warnings
+	// Nvidia may return a single '\n' that we ignore
 	if (build_code != CL_SUCCESS) {
 		// Give us info about error and exit (through HANDLE_CLERROR)
 		if (options.verbosity <= VERB_LEGACY)
 			fprintf(stderr, "Options used: %s %s\n",
 			        build_opts, kernel_source_file);
-		if (strlen(build_log) > 1)
+		if (strlen(build_log) > 1) {
+			fprintf(stderr, "Build time: %ss\n", ns2string(end - start));
 			fprintf(stderr, "Build log: %s\n", build_log);
+		} else if (options.verbosity >= VERB_MAX)
+			fprintf(stderr, "Build time: %ss\n", ns2string(end - start));
 		fprintf(stderr, "Error building kernel %s. DEVICE_INFO=%d\n",
 		        kernel_source_file, device_info[sequential_id]);
 		HANDLE_CLERROR(build_code, "clBuildProgram");
 	}
-	// Nvidia may return a single '\n' that we ignore
-	else if (options.verbosity >= LOG_VERB && strlen(build_log) > 1)
-		fprintf(stderr, "Build log: %s\n", build_log);
+	else if (options.verbosity >= LOG_VERB) {
+		if (strlen(build_log) > 1) {
+			fprintf(stderr, "Build time: %ss\n", ns2string(end - start));
+			fprintf(stderr, "Build log: %s\n", build_log);
+		} else if (options.verbosity >= VERB_MAX)
+			fprintf(stderr, "Build time: %ss\n", ns2string(end - start));
+	}
 
 	MEM_FREE(build_log);
 	MEM_FREE(build_opts);
@@ -1549,7 +1555,7 @@ static cl_ulong gws_test(size_t gws, unsigned int rounds, int sequential_id)
 	for (i = 0; (*multi_profilingEvent[i]); i++)
 		number_of_events++;
 
-	//** Get execution time **//
+	/* Get execution time */
 	for (i = 0; i < number_of_events; i++) {
 		char mult[32] = "";
 
@@ -2149,22 +2155,22 @@ static void load_device_info(int sequential_id)
 	else if (device == CL_DEVICE_TYPE_ACCELERATOR)
 		device_info[sequential_id] = DEV_ACCELERATOR;
 
-	device_info[sequential_id] += get_vendor_id(sequential_id);
-	device_info[sequential_id] += get_processor_family(sequential_id);
-	device_info[sequential_id] += get_byte_addressable(sequential_id);
+	device_info[sequential_id] |= get_vendor_id(sequential_id);
+	device_info[sequential_id] |= get_processor_family(sequential_id);
+	device_info[sequential_id] |= get_byte_addressable(sequential_id);
 
 	get_compute_capability(sequential_id, &major, &minor);
 
 	if (major) {
-		device_info[sequential_id] += (major == 2 ? DEV_NV_C2X : 0);
-		device_info[sequential_id] +=
+		device_info[sequential_id] |= (major == 2 ? DEV_NV_C2X : 0);
+		device_info[sequential_id] |=
 		    (major == 3 && minor == 0 ? DEV_NV_C30 : 0);
-		device_info[sequential_id] +=
+		device_info[sequential_id] |=
 		    (major == 3 && minor == 2 ? DEV_NV_C32 : 0);
-		device_info[sequential_id] +=
+		device_info[sequential_id] |=
 		    (major == 3 && minor == 5 ? DEV_NV_C35 : 0);
-		device_info[sequential_id] += (major == 5 ? DEV_NV_MAXWELL : 0);
-		device_info[sequential_id] += (major >= 5 ? DEV_NV_MAXWELL_PLUS : 0);
+		device_info[sequential_id] |= (major == 5 ? DEV_NV_MAXWELL : 0);
+		device_info[sequential_id] |= (major >= 5 ? DEV_NV_MAXWELL_PLUS : 0);
 	}
 }
 
@@ -2648,8 +2654,7 @@ cl_uint get_processor_family(int sequential_id)
 	if (*dname)
 		strlwr(&dname[1]);
 
-	if gpu_amd
-	(device_info[sequential_id]) {
+	if (gpu_amd(device_info[sequential_id])) {
 
 		if ((strstr(dname, "Cedar") ||  //AMD Radeon VLIW5
 		        strstr(dname, "Redwood") || strstr(dname, "Juniper")

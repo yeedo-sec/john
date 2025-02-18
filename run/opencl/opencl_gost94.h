@@ -57,6 +57,11 @@ typedef union {
 #define GOST94_BLOCK_SIZE  32
 #define GOST94_HASH_LENGTH 32
 
+#if GOST94_USE_LOCAL
+#define THREAD  get_local_id(0)
+#define LWS     get_local_size(0)
+#endif
+
 /* algorithm context */
 typedef struct {
 	uint hash[8];  /* algorithm 256-bit state */
@@ -71,7 +76,7 @@ typedef struct {
  *
  * @param ctx context to initialize
  */
-inline void gost94_init(gost94_ctx *ctx)
+INLINE void gost94_init(gost94_ctx *ctx)
 {
 	memset_p(ctx, 0, sizeof(gost94_ctx));
 }
@@ -119,7 +124,7 @@ inline void gost94_init(gost94_ctx *ctx)
  * @param hash intermediate message hash
  * @param block the message block to process
  */
-inline void rhash_gost94_block_compress(gost94_ctx *ctx, const uint* block, MAYBE_LOCAL const rhash_gost94_sbox *sbox)
+INLINE void rhash_gost94_block_compress(gost94_ctx *ctx, const uint* block, MAYBE_LOCAL const rhash_gost94_sbox *sbox)
 {
 	uint i;
 	uint key[8], u[8], v[8], w[8], s[8];
@@ -261,7 +266,7 @@ inline void rhash_gost94_block_compress(gost94_ctx *ctx, const uint* block, MAYB
  * @param ctx algorithm context
  * @param block the 256-bit message block to process
  */
-inline void rhash_gost94_compute_sum_and_hash(gost94_ctx * ctx, const uint* block, MAYBE_LOCAL const rhash_gost94_sbox *sbox)
+INLINE void rhash_gost94_compute_sum_and_hash(gost94_ctx * ctx, const uint* block, MAYBE_LOCAL const rhash_gost94_sbox *sbox)
 {
 #if !__ENDIAN_LITTLE__
 	uint block_le[8]; /* tmp buffer for little endian number */
@@ -295,7 +300,7 @@ inline void rhash_gost94_compute_sum_and_hash(gost94_ctx * ctx, const uint* bloc
  * @param msg message chunk
  * @param size length of the message chunk
  */
-inline void gost94_update(gost94_ctx *ctx, const uchar* msg, uint size, MAYBE_LOCAL const rhash_gost94_sbox *sbox)
+static NOINLINE void gost94_update(gost94_ctx *ctx, const uchar* msg, uint size, MAYBE_LOCAL const rhash_gost94_sbox *sbox)
 {
 	uint index = ctx->length & 31;
 	ctx->length += size;
@@ -334,7 +339,7 @@ inline void gost94_update(gost94_ctx *ctx, const uchar* msg, uint size, MAYBE_LO
 }
 
 #if !__ENDIAN_LITTLE__
-inline void rhash_u32_swap_copy(void* to, const void* from, uint length) {
+INLINE void rhash_u32_swap_copy(void* to, const void* from, uint length) {
 	uint i;
 	uint *pO, *pI;
 	pO = (uint *)to;
@@ -356,7 +361,7 @@ inline void rhash_u32_swap_copy(void* to, const void* from, uint length) {
  * @param ctx the algorithm context containing current hashing state
  * @param result calculated hash in binary form
  */
-inline void gost94_final(gost94_ctx *ctx, uchar *result, MAYBE_LOCAL const rhash_gost94_sbox *sbox)
+static NOINLINE void gost94_final(gost94_ctx *ctx, uchar *result, MAYBE_LOCAL const rhash_gost94_sbox *sbox)
 {
 	uint  index = ctx->length & 31;
 	uint* msg32 = (uint*)ctx->message;
@@ -380,7 +385,7 @@ inline void gost94_final(gost94_ctx *ctx, uchar *result, MAYBE_LOCAL const rhash
 }
 
 /* ROTL macros rotate a 32-bit word left by n bits */
-#define ROTL32(dword, n) ((dword) << (n) ^ ((dword) >> (32 - (n))))
+#define ROTL32(dword, n) rotate(dword, (uint)(n))
 
 #if GOST94_FLAT_INIT
 __constant uint precomp_table[1024] = {
@@ -548,35 +553,38 @@ __constant uchar sbox[8][16] = {
  * it at run-time can save a little space in the executable file
  * in trade of consuming some time at program start.
  */
-inline void gost94_init_table(MAYBE_LOCAL rhash_gost94_sbox *cur_sbox)
+INLINE void gost94_init_table(MAYBE_LOCAL rhash_gost94_sbox *cur_sbox)
 {
-	uint lid = get_local_id(0);
-#if GOST94_FLAT_INIT
-	uint ls = get_local_size(0);
 	uint i;
-
-	for (i = lid; i < 1024; i += ls)
+#if GOST94_FLAT_INIT
+#if GOST94_USE_LOCAL
+	for (i = THREAD; i < 1024; i += LWS)
 		cur_sbox->flat[i] = precomp_table[i];
 #else
-	uint a, b, i;
+	for (i = 0; i < 1024; i++)
+		cur_sbox->flat[i] = precomp_table[i];
+#endif	/* GOST94_USE_LOCAL */
+#else
+	uint a, b;
 	uint ax, bx, cx, dx;
 
-	if (lid == 0) {
-		for (i = 0, a = 0; a < 16; a++) {
-			ax = (uint)sbox[1][a] << 15;
-			bx = (uint)sbox[3][a] << 23;
-			cx = ROTL32((uint)sbox[5][a], 31);
-			dx = (uint)sbox[7][a] << 7;
+#if GOST94_USE_LOCAL
+	if (THREAD == 0) // Suboptimal
+#endif
+	for (i = 0, a = 0; a < 16; a++) {
+		ax = (uint)sbox[1][a] << 15;
+		bx = (uint)sbox[3][a] << 23;
+		cx = ROTL32((uint)sbox[5][a], 31);
+		dx = (uint)sbox[7][a] << 7;
 
-			for (b = 0; b < 16; b++, i++) {
-				cur_sbox->array[0][i] = ax | ((uint)sbox[0][b] << 11);
-				cur_sbox->array[1][i] = bx | ((uint)sbox[2][b] << 19);
-				cur_sbox->array[2][i] = cx | ((uint)sbox[4][b] << 27);
-				cur_sbox->array[3][i] = dx | ((uint)sbox[6][b] << 3);
-			}
+		for (b = 0; b < 16; b++, i++) {
+			cur_sbox->array[0][i] = ax | ((uint)sbox[0][b] << 11);
+			cur_sbox->array[1][i] = bx | ((uint)sbox[2][b] << 19);
+			cur_sbox->array[2][i] = cx | ((uint)sbox[4][b] << 27);
+			cur_sbox->array[3][i] = dx | ((uint)sbox[6][b] << 3);
 		}
 	}
-#endif
+#endif	/* GOST94_FLAT_INIT */
 #if GOST94_USE_LOCAL
 	barrier(CLK_LOCAL_MEM_FENCE);
 #endif

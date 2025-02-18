@@ -7,12 +7,6 @@
  */
 
 #include "opencl_misc.h"
-
-#define STREEBOG256CRYPT        1
-#define STREEBOG_LOCAL_AX       1
-#define STREEBOG_VECTOR         1
-#define STREEBOG_UNROLL         0
-#define STREEBOG_MANUAL_UNROLL  0
 #include "opencl_streebog.h"
 
 #define SALT_LENGTH                 16
@@ -59,6 +53,10 @@ __kernel void gost12256init(__global inbuf *in,
 	uint lid = get_local_id(0);
 
 	for (uint i = lid; i < 256; i += ls) {
+#if STREEBOG_LOCAL_C
+		if (i < 12)
+			loc_buf->C[i].VWORD = C[i].VWORD;
+#endif
 		for (uint j = 0; j < 8; j++)
 			loc_buf->Ax[j][i] = Ax[j][i];
 	}
@@ -194,6 +192,10 @@ __kernel void gost12256loop(__global inbuf *in,
 	uint lid = get_local_id(0);
 
 	for (uint i = lid; i < 256; i += ls) {
+#if STREEBOG_LOCAL_C
+		if (i < 12)
+			loc_buf->C[i].VWORD = C[i].VWORD;
+#endif
 		for (uint j = 0; j < 8; j++)
 			loc_buf->Ax[j][i] = Ax[j][i];
 	}
@@ -201,7 +203,6 @@ __kernel void gost12256loop(__global inbuf *in,
 #endif
 
 	/* Repeatedly run the collected hash value through Streebog to burn CPU cycles.  */
-#pragma unroll HASH_LOOPS
 	for (cnt = 0; cnt < HASH_LOOPS; ++cnt) {
 		/* New context. */
 		GOST34112012Init(&ctx, 256);
@@ -251,23 +252,27 @@ __kernel void gost12256final(__global inbuf *in,
 
 	memcpy256(&(result), &(out[gid]));
 
-#if STREEBOG_LOCAL_AX
 	if (rounds) {
 		saltlen = ssalt->len;
 		len = in[gid].len;
 		memcpy_gp(p_bytes, state[gid].p_bytes, len);
 		memcpy_gp(s_bytes, state[gid].s_bytes, saltlen);
 
+#if STREEBOG_LOCAL_AX
 		uint ls = get_local_size(0);
 		uint lid = get_local_id(0);
 
 		for (uint i = lid; i < 256; i += ls) {
+#if STREEBOG_LOCAL_C
+			if (i < 12)
+				loc_buf->C[i].VWORD = C[i].VWORD;
+#endif
 			for (uint j = 0; j < 8; j++)
 				loc_buf->Ax[j][i] = Ax[j][i];
 		}
 		barrier(CLK_LOCAL_MEM_FENCE);
-	}
 #endif
+	}
 
 	/* Repeatedly run the collected hash value through Streebog to burn CPU cycles.  */
 	for (cnt = 0; cnt < rounds; ++cnt) {

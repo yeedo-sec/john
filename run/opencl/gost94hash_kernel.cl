@@ -8,7 +8,9 @@
 
 #include "opencl_misc.h"
 
+#if gpu(DEVICE_INFO)
 #define GOST94_USE_LOCAL      1
+#endif
 #define GOST94_FLAT_INIT      1
 #include "opencl_gost94.h"
 
@@ -196,7 +198,6 @@ __kernel void gost94loop(__global inbuf *in,
 	memcpy_gp(s_bytes, state[gid].s_bytes, saltlen);
 
 	/* Repeatedly run the collected hash value through GOST94 to burn CPU cycles.  */
-#pragma unroll HASH_LOOPS
 	for (cnt = 0; cnt < HASH_LOOPS; ++cnt) {
 		/* New context. */
 		gost94_init(&ctx);

@@ -76,4 +76,4 @@ clean:
 	rm -f *.exe simple_test test pkt_test
 
 distclean: clean
-	$(RM) Makefile
+	$(RM) Makefile pkt_comm/Makefile

@@ -1,4 +1,9 @@
 /*
+ * Porting to OpenCL + optimizations: Copyright (c) 2022-2025 magnum, and those
+ * changes hereby released to the general public under the following terms:
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted.
+ *
  * Copyright (c) 2013, Alexey Degtyarev <alexey@renatasystems.org>.
  * All rights reserved.
  *
@@ -22,11 +27,6 @@
  * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * Porting to OpenCL + optimizations: Copyright (c) 2022 magnum, and those changes
- * hereby released to the general public under the following terms:
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted.
  */
 
 #ifndef _OPENCL_STREEBOG_H
@@ -34,10 +34,24 @@
 
 #include "opencl_misc.h"
 
+#if gpu(DEVICE_INFO)
+#define STREEBOG_LOCAL_AX   1
+#define STREEBOG_LOCAL_C    0
+#endif
+
+#define STREEBOG_VECTOR     1
+#define STREEBOG_UNROLL     0
+
 #if STREEBOG_LOCAL_AX
 #define AX loc_buf->Ax
 #else
 #define AX Ax
+#endif
+
+#if STREEBOG_LOCAL_C
+#define CC loc_buf->C
+#else
+#define CC C
 #endif
 
 #if STREEBOG_UNROLL
@@ -52,21 +66,21 @@
 #define memcpy512(dst, src) do {	  \
 		(dst)->VWORD = (src)->VWORD; \
 	} while (0)
-#define memcpy256	memcpy512
 #else
 #define memcpy512(dst, src) do {	  \
 		UNROLL16 \
 		for (uint i = 0; i < 16; i++) \
 			(dst)->DWORD[i] = (src)->DWORD[i]; \
 	} while (0)
+#endif
 
 #define memcpy256(dst, src) do {	  \
 		UNROLL8 \
 		for (uint i = 0; i < 8; i++) \
 			(dst)->DWORD[i] = (src)->DWORD[i]; \
 	} while (0)
-#endif
 
+/* QWORD on top because declarations depend on it. */
 typedef union {
 	ulong  QWORD[4];
 	uint   DWORD[8];
@@ -87,12 +101,10 @@ typedef struct {
 	uint512_u N;
 	uint512_u Sigma;
 	uint bufsize;
-#if !STREEBOG512CRYPT && !STREEBOG256CRYPT
-	uint digest_size;
-#endif
 } GOST34112012Context;
 
 typedef struct {
+	uint512_u C[12];
 	ulong Ax[8][256];
 } localbuf;
 
@@ -145,7 +157,7 @@ typedef struct {
 	} while (0)
 
 #define ROUND(i, Ki, data) do {	  \
-		XLPS(Ki, &C[i], Ki); \
+		XLPS(Ki, &CC[i], Ki); \
 		XLPS(Ki, data, data); \
 	} while (0)
 
@@ -731,28 +743,21 @@ __constant const ulong Ax[8][256] = {
 	}
 };
 
-inline void
+INLINE void
 GOST34112012Init(GOST34112012Context *CTX, const uint digest_size)
 {
 	CTX->buffer.VWORD = 0;
-#if STREEBOG256CRYPT
-	CTX->h.VWORD = 0x01010101U;
-#elif STREEBOG512CRYPT
+#if STREEBOG512
 	CTX->h.VWORD = 0;
 #else
-	CTX->digest_size = digest_size;
-
-	if (digest_size == 256)
-		CTX->h.VWORD = 0x01010101U;
-	else
-		CTX->h.VWORD = 0;
+	CTX->h.VWORD = 0x01010101U;
 #endif
 	CTX->N.VWORD = 0;
 	CTX->Sigma.VWORD = 0;
 	CTX->bufsize = 0;
 }
 
-inline void
+INLINE void
 pad(GOST34112012Context *CTX)
 {
 	if (CTX->bufsize > 63)
@@ -764,7 +769,7 @@ pad(GOST34112012Context *CTX)
 }
 
 /* Let r = x + y modulo 2^512 */
-inline void
+INLINE void
 add512(const uint512_u *x, const uint512_u *y, uint512_u *r)
 {
 	uint CF;
@@ -785,7 +790,7 @@ add512(const uint512_u *x, const uint512_u *y, uint512_u *r)
 	}
 }
 
-inline void
+INLINE void
 g(uint512_u *h, const uint512_u *N, const uint512_u *m, __local localbuf *loc_buf)
 {
 	uint512_u Ki, data;
@@ -797,7 +802,6 @@ g(uint512_u *h, const uint512_u *N, const uint512_u *m, __local localbuf *loc_bu
 	XLPS(&Ki, m, &data);
 
 #if STREEBOG_UNROLL
-#if STREEBOG_MANUAL_UNROLL
 	ROUND(0, &Ki, &data);
 	ROUND(1, &Ki, &data);
 	ROUND(2, &Ki, &data);
@@ -810,10 +814,6 @@ g(uint512_u *h, const uint512_u *N, const uint512_u *m, __local localbuf *loc_bu
 	ROUND(9, &Ki, &data);
 	ROUND(10, &Ki, &data);
 #else
-#pragma unroll 11
-#endif
-#endif
-#if !STREEBOG_MANUAL_UNROLL
 	for (uint i = 0; i < 11; i++)
 		ROUND(i, &Ki, &data);
 #endif
@@ -826,7 +826,7 @@ g(uint512_u *h, const uint512_u *N, const uint512_u *m, __local localbuf *loc_bu
 }
 
 // Special case of the above where N is all zeros
-inline void
+INLINE void
 g0(uint512_u *h, const uint512_u *m, __local localbuf *loc_buf)
 {
 	uint512_u Ki, data;
@@ -838,7 +838,6 @@ g0(uint512_u *h, const uint512_u *m, __local localbuf *loc_buf)
 	XLPS(&Ki, m, &data);
 
 #if STREEBOG_UNROLL
-#if STREEBOG_MANUAL_UNROLL
 	ROUND(0, &Ki, &data);
 	ROUND(1, &Ki, &data);
 	ROUND(2, &Ki, &data);
@@ -851,14 +850,9 @@ g0(uint512_u *h, const uint512_u *m, __local localbuf *loc_buf)
 	ROUND(9, &Ki, &data);
 	ROUND(10, &Ki, &data);
 #else
-#pragma unroll 11
-#endif
-#endif
-#if !STREEBOG_MANUAL_UNROLL
 	for (uint i = 0; i < 11; i++)
 		ROUND(i, &Ki, &data);
 #endif
-
 	XLPS(&Ki, &C[11], &Ki);
 	XOR512(&Ki, &data, &data);
 	/* E() done */
@@ -867,7 +861,7 @@ g0(uint512_u *h, const uint512_u *m, __local localbuf *loc_buf)
 	XOR512(&data, m, h);
 }
 
-inline void
+INLINE void
 stage2(GOST34112012Context *CTX, const uint512_u *data, __local localbuf *loc_buf)
 {
 	const uint512_u buffer512 = {{ 0x0000000000000200UL, 0, 0, 0, 0, 0, 0, 0 }};
@@ -882,7 +876,7 @@ stage2(GOST34112012Context *CTX, const uint512_u *data, __local localbuf *loc_bu
 	add512(&(CTX->Sigma), &m, &(CTX->Sigma));
 }
 
-inline void
+INLINE void
 stage2d(GOST34112012Context *CTX, const uchar *data, __local localbuf *loc_buf)
 {
 	const uint512_u buffer512 = {{ 0x0000000000000200UL, 0, 0, 0, 0, 0, 0, 0 }};
@@ -898,7 +892,7 @@ stage2d(GOST34112012Context *CTX, const uchar *data, __local localbuf *loc_buf)
 	add512(&(CTX->Sigma), &m, &(CTX->Sigma));
 }
 
-inline void
+INLINE void
 stage3(GOST34112012Context *CTX, __local localbuf *loc_buf)
 {
 	uint512_u buf = {{ 0 }};
@@ -916,7 +910,7 @@ stage3(GOST34112012Context *CTX, __local localbuf *loc_buf)
 	g0(&(CTX->h), &(CTX->Sigma), loc_buf);
 }
 
-inline void
+static NOINLINE void
 GOST34112012Update(GOST34112012Context *CTX, const uchar *data, uint len, __local localbuf *loc_buf)
 {
 	if (CTX->bufsize) {
@@ -947,30 +941,23 @@ GOST34112012Update(GOST34112012Context *CTX, const uchar *data, uint len, __loca
 	}
 }
 
-inline void
-GOST34112012Final(GOST34112012Context *CTX,
-#if STREEBOG512CRYPT
-                  uint512_u
-#else
-                  uint256_u
-#endif
-                  *digest, __local localbuf *loc_buf)
+static NOINLINE void
+GOST34112012Final(GOST34112012Context *CTX, void *_digest, __local localbuf *loc_buf)
 {
+#if STREEBOG512
+	uint512_u *digest = _digest;
+#else
+	uint256_u *digest = _digest;
+#endif
 	stage3(CTX, loc_buf);
 
 	CTX->bufsize = 0;
 
-#if STREEBOG512CRYPT
+#if STREEBOG512
 	memcpy512(digest, &(CTX->h));
-#elif STREEBOG256CRYPT
+#else
 	for (uint i = 0; i < 8; i++)
 		digest->DWORD[i] = CTX->h.DWORD[8 + i];
-#else
-	if (CTX->digest_size == 256)
-		for (uint i = 0; i < 8; i++)
-			digest->DWORD[i] = CTX->h.DWORD[8 + i];
-	else
-		memcpy512(digest, &(CTX->h));
 #endif
 }
 

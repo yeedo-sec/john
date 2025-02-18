@@ -56,6 +56,7 @@
 
 #ifndef BENCH_BUILD
 #include "options.h"
+#include "status.h"
 #else
 /*
  * This code was copied from loader.c.  It has been stripped to bare bones
@@ -1080,6 +1081,7 @@ next:
 		ldr_free_db(test_db, 1);
 		fmt_done(format);
 #ifndef BENCH_BUILD
+		emms();
 		if (options.flags & FLG_MASK_CHK) {
 			mask_done();
 			mask_destroy();
